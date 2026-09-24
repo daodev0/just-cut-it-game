@@ -1,0 +1,17 @@
+# Archivos de compilación de Gradle
+.gradle/
+build/
+out/
+
+# Archivos de entorno e IDEs (IntelliJ / Eclipse / VS Code)
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
