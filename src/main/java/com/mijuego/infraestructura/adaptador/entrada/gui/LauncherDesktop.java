@@ -6,7 +6,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 public class LauncherDesktop {
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
-        config.setTitle("Incremental Clipper");
+        config.setTitle("Just Cut It!");
         config.setWindowedMode(1280, 720);
         config.setForegroundFPS(60);
         config.setResizable(false);
