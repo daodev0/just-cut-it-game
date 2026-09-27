@@ -2,8 +2,8 @@ package com.mijuego.dominio.modelo;
 
 public class Tijera {
     // ATRIBUTOS (El estado de la tijera)
-    private String nombre;
-    private double poderBase;
+    private final String nombre;
+    private final double poderBase;
     private int nivel;
 
     // CONSTRUCTOR
@@ -19,8 +19,8 @@ public class Tijera {
     }
 
     // REGLA DE NEGOCIO: El costo de la mejora aumenta un 50% por nivel
-    public double obtenerCostoMejora() {
-        return 10.0 * Math.pow(1.5, this.nivel);
+    public int obtenerCostoMejora() {
+        return (int) Math.ceil(10.0 * Math.pow(1.5, this.nivel));
     }
 
     // ACCIÓN: Subir de nivel

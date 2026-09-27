@@ -2,7 +2,7 @@ package com.mijuego.dominio.modelo;
 
 public class Papel {
     private double vidaActual;
-    private double vidaMaxima;
+    private final double vidaMaxima;
 
     public Papel(double vidaMaxima) {
         this.vidaMaxima = vidaMaxima;

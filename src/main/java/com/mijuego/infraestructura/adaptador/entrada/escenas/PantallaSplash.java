@@ -1,4 +1,4 @@
-package com.mijuego.infraestructura.adaptador.entrada.gui;
+package com.mijuego.infraestructura.adaptador.entrada.escenas;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
@@ -8,15 +8,17 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.mijuego.aplicacion.puerto.salida.PuertoAudio;
+import com.mijuego.infraestructura.adaptador.entrada.gui.JuegoGUI;
 
 public class PantallaSplash implements Screen {
 
     private final JuegoGUI juego;
+    private final PuertoAudio audio;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private Viewport viewport;
@@ -27,19 +29,19 @@ public class PantallaSplash implements Screen {
     // Tiempos
     private float tiempoTranscurrido = 0f;
     private final float DURACION_TOTAL = 5.0f;
-    private final float RETARDO_INICIAL = 0.6f;
-    private final float TIEMPO_BARRIDO = 1.2f; // Tiempo que tarda en "pintarse"
+    private final float RETARDO_INICIAL = 0.4f;
+    private final float TIEMPO_CAIDA = 0.5f; // Tiempo que tarda en caer y aparecer
     private final float TIEMPO_FADE_OUT = 0.8f;
 
-    // Rectángulos para la máscara de recorte
-    private Rectangle clipBounds;
-    private Rectangle scissors;
+    // Control de sonido
+    private boolean sonidoReproducido = false;
 
     private boolean iniciandoSalida = false;
     private float tiempoFadeOut = 0f;
 
-    public PantallaSplash(JuegoGUI juego) {
+    public PantallaSplash(JuegoGUI juego, PuertoAudio audio) {
         this.juego = juego;
+        this.audio = audio;
     }
 
     @Override
@@ -59,9 +61,6 @@ public class PantallaSplash implements Screen {
         pixmap.fill();
         imgOverlayNegro = new Texture(pixmap);
         pixmap.dispose();
-
-        clipBounds = new Rectangle();
-        scissors = new Rectangle();
     }
 
     @Override
@@ -77,60 +76,57 @@ public class PantallaSplash implements Screen {
             iniciandoSalida = true;
         }
 
+        if (!sonidoReproducido && (tiempoTranscurrido > RETARDO_INICIAL || iniciandoSalida)) {
+            audio.sonar("wosh");
+            sonidoReproducido = true;
+        }
+
         if (iniciandoSalida) {
             tiempoFadeOut += deltaAjustado;
-            if (tiempoFadeOut >= TIEMPO_FADE_OUT) {
-                juego.setScreen(new PantallaMenuPrincipal(juego));
-                return;
-            }
         }
 
         Gdx.gl.glClearColor(1f, 1f, 1f, 1f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Posición fija y tamaño del Logo
+        // Dimensiones del logo
         float relacionAspecto = (float) imgLogoEstudio.getWidth() / imgLogoEstudio.getHeight();
         float altoDeseado = 110f;
         float anchoProporcional = altoDeseado * relacionAspecto;
+
+        // Posición final (centrado en la pantalla)
         float posX = (JuegoGUI.VIRTUAL_WIDTH - anchoProporcional) / 2f;
-        float posY = (JuegoGUI.VIRTUAL_HEIGHT - altoDeseado) / 2f;
+        float posYFinal = (JuegoGUI.VIRTUAL_HEIGHT - altoDeseado) / 2f;
 
-        // Progreso del barrido (de 0.0 a 1.0)
-        float progresoBarrido = 0f;
+        // Arranca solo 50 o 60 píxeles por encima de su posición de destino en el centro
+        float posYInicial = posYFinal + 20f;
+
+        // Cálculo del progreso de caída (de 0.0 a 1.0)
+        float progresoAnimacion = 0f;
         if (tiempoTranscurrido > RETARDO_INICIAL) {
-            progresoBarrido = (tiempoTranscurrido - RETARDO_INICIAL) / TIEMPO_BARRIDO;
+            progresoAnimacion = (tiempoTranscurrido - RETARDO_INICIAL) / TIEMPO_CAIDA;
         }
-        progresoBarrido = MathUtils.clamp(progresoBarrido, 0f, 1f);
+        progresoAnimacion = MathUtils.clamp(progresoAnimacion, 0f, 1f);
 
-        // Si estamos omitiendo con clic, mostramos el logo completo de inmediato
         if (iniciandoSalida) {
-            progresoBarrido = 1f;
+            progresoAnimacion = 1f;
         }
 
-        // --- MÁSCARA DE RECORRIDO (BARRIDO DE ARRIBA HACIA ABAJO) ---
-        float altoRevelado = altoDeseado * progresoBarrido;
-        // La máscara empieza desde la parte superior del logo y crece hacia abajo
-        clipBounds.set(posX, posY + (altoDeseado - altoRevelado), anchoProporcional, altoRevelado);
+        // Interpolación suave con desaceleración (Pow2Out / Decelerate)
+        float progresoSuave = Interpolation.pow2Out.apply(progresoAnimacion);
+
+        // Posición Y actual e Intensidad Alfa (Fade-In)
+        float posYActual = MathUtils.lerp(posYInicial, posYFinal, progresoSuave);
+        float alphaLogo = progresoAnimacion; // De 0.0 (invisible) a 1.0 (visible)
 
         camera.update();
         batch.setProjectionMatrix(camera.combined);
-
-        // Convertir las coordenadas del mundo a píxeles de pantalla para OpenGL
-        ScissorStack.calculateScissors(camera, batch.getTransformMatrix(), clipBounds, scissors);
-
         batch.begin();
 
-        // Aplicar máscara de recorte si hay algo que revelar
-        boolean recortando = ScissorStack.pushScissors(scissors);
+        // Dibujar el logo deslizándose y cambiando su opacidad
+        batch.setColor(1f, 1f, 1f, alphaLogo);
+        batch.draw(imgLogoEstudio, posX, posYActual, anchoProporcional, altoDeseado);
 
-        if (recortando && altoRevelado > 0f) {
-            batch.setColor(1f, 1f, 1f, 1f);
-            batch.draw(imgLogoEstudio, posX, posY, anchoProporcional, altoDeseado);
-            batch.flush(); // Enviar los comandos a la GPU antes de quitar la máscara
-            ScissorStack.popScissors();
-        }
-
-        // Capa negra final de salida
+        // Capa negra de transición de salida (Fade-Out hacia el menú)
         if (iniciandoSalida) {
             float alphaNegro = MathUtils.clamp(tiempoFadeOut / TIEMPO_FADE_OUT, 0f, 1f);
             batch.setColor(1f, 1f, 1f, alphaNegro);
@@ -139,6 +135,10 @@ public class PantallaSplash implements Screen {
 
         batch.setColor(1f, 1f, 1f, 1f);
         batch.end();
+
+        if (iniciandoSalida && tiempoFadeOut >= TIEMPO_FADE_OUT) {
+            juego.setScreen(new PantallaMenuPrincipal(juego, juego.getAudio(), juego.getConfiguracion()));
+        }
     }
 
     @Override

@@ -12,11 +12,11 @@ public class EfectoEspiral implements Disposable {
     private float anguloRotacion = 0f;
 
     // Equilibrio de velocidad y apariencia
-    private final float VELOCIDAD_GIRO = 70f;      // Velocidad media fluida (ni muy rápida ni parada)
-    private final float TAMANO_PANTALLA = 2500f;    // Cubre la pantalla completa desde el frame 0
-    private final float OPACIDAD = 0.15f;            // Punto medio de visibilidad
+    private static final float VELOCIDAD_GIRO = 70f;
+    private static final float TAMANO_PANTALLA = 2500f;
+    private static final float OPACIDAD = 0.15f;
 
-    public EfectoEspiral(int tamanoTextura) {
+    public EfectoEspiral() {
         this.imgEspiralBase = crearEspiralBalanceada(1024);
     }
 

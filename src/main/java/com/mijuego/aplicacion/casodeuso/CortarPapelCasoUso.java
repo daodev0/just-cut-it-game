@@ -1,26 +1,34 @@
 package com.mijuego.aplicacion.casodeuso;
 
+import com.mijuego.aplicacion.puerto.entrada.PuertoCortarPapel;
 import com.mijuego.dominio.modelo.Papel;
+import com.mijuego.dominio.modelo.Partida;
 import com.mijuego.dominio.modelo.Tijera;
 import com.mijuego.dominio.servicio.ServicioCorte;
+import java.util.Objects;
 
-public class CortarPapelCasoUso {
+public class CortarPapelCasoUso implements PuertoCortarPapel {
 
     private final ServicioCorte servicioCorte;
+    private static final int RECOMPENSA_HOJA = 10;
 
     public CortarPapelCasoUso(ServicioCorte servicioCorte) {
-        this.servicioCorte = servicioCorte;
+        this.servicioCorte = Objects.requireNonNull(servicioCorte, "El servicio de corte es obligatorio");
     }
 
     // Retorna la cantidad de monedas ganadas en este corte
-    public double ejecutar(Tijera tijera, Papel papel) {
+    @Override
+    public int ejecutar(Partida partida) {
+        Tijera tijera = partida.obtenerTijera();
+        Papel papel = partida.obtenerPapel();
         servicioCorte.ejecutarCorte(tijera, papel);
 
         if (papel.estaDestruido()) {
             papel.reiniciar();
-            return 10.0; // Recompensa de 10 monedas por destruir una hoja
+            partida.agregarMonedas(RECOMPENSA_HOJA);
+            return RECOMPENSA_HOJA;
         }
 
-        return 0.0; // Si no la destruyó, aún no gana monedas
+        return 0; // Si no la destruyó, aún no gana monedas
     }
 }
