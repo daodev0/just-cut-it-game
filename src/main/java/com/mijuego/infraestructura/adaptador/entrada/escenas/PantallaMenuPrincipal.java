@@ -1,6 +1,7 @@
 package com.mijuego.infraestructura.adaptador.entrada.escenas;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -107,10 +108,11 @@ public class PantallaMenuPrincipal implements Screen {
         touchPoint = new Vector3();
 
         fontTitulo = new BitmapFont();
-        fontTitulo.getData().setScale(1.8f);
+        float escalaFuentes = calcularEscalaFuentes();
+        fontTitulo.getData().setScale(1.8f * escalaFuentes);
 
         fontTexto = new BitmapFont();
-        fontTexto.getData().setScale(1.2f);
+        fontTexto.getData().setScale(1.2f * escalaFuentes);
 
         glyphLayout = new GlyphLayout();
         efectoEspiral = new EfectoEspiral();
@@ -155,7 +157,8 @@ public class PantallaMenuPrincipal implements Screen {
 
         // DIMENSIONES Y POSICIONAMIENTO
         float anchoBoton = 200f;
-        float altoBoton = 60f;
+        boolean esAndroid = Gdx.app.getType() == Application.ApplicationType.Android;
+        float altoBoton = esAndroid ? 96f : 60f;
         float espacioEntreBotones = 40f;
         float centroX = JuegoGUI.VIRTUAL_WIDTH / 2f;
 
@@ -166,7 +169,13 @@ public class PantallaMenuPrincipal implements Screen {
         float modalAlto = 580f;
         rectCajaConfig = new Rectangle((JuegoGUI.VIRTUAL_WIDTH - modalAncho) / 2f, (JuegoGUI.VIRTUAL_HEIGHT - modalAlto) / 2f, modalAncho, modalAlto);
 
-        rectBtnCerrarConfig = new Rectangle(rectCajaConfig.x + rectCajaConfig.width - 50, rectCajaConfig.y + rectCajaConfig.height - 50, 40, 40);
+        float tamanoCerrar = esAndroid ? 80f : 40f;
+        float margenCerrar = esAndroid ? 90f : 50f;
+        rectBtnCerrarConfig = new Rectangle(
+                rectCajaConfig.x + rectCajaConfig.width - margenCerrar,
+                rectCajaConfig.y + rectCajaConfig.height - margenCerrar,
+                tamanoCerrar,
+                tamanoCerrar);
 
         float controlY = rectCajaConfig.y + 420f;
         float controlWidth = 45f;
@@ -279,9 +288,13 @@ public class PantallaMenuPrincipal implements Screen {
                 if (rectBtnCerrarConfig.contains(touchPoint.x, touchPoint.y)) {
                     mostrandoConfiguracion = false;
                 } else if (rectBtnModoPantalla.contains(touchPoint.x, touchPoint.y)) {
-                    configuracion.alternarModoPantalla();
+                    if (Gdx.app.getType() != Application.ApplicationType.Android) {
+                        configuracion.alternarModoPantalla();
+                    }
                 } else if (rectBtnAlternarCursor.contains(touchPoint.x, touchPoint.y)) {
-                    configuracion.alternarCursor();
+                    if (Gdx.app.getType() != Application.ApplicationType.Android) {
+                        configuracion.alternarCursor();
+                    }
                 } else if (rectBtnSensiMenos.contains(touchPoint.x, touchPoint.y)) {
                     configuracion.setSensibilidadCursor(configuracion.getSensibilidadCursor() - 0.1f);
                     audio.sonar("select");
@@ -354,29 +367,40 @@ public class PantallaMenuPrincipal implements Screen {
             fontTexto.draw(batch, "Efectos de sonido", rectCajaConfig.x + 60, rectSliderSFX.y + 23);
             dibujarSlider(rectSliderSFX, audio.getVolumenSFX());
 
+            boolean esAndroid = Gdx.app.getType() == Application.ApplicationType.Android;
+
             // --- FILA 3: SENSIBILIDAD ---
             float sensiVal = configuracion.getSensibilidadCursor();
             String textoSensi = String.format("%.1fx", sensiVal);
 
-            fontTexto.setColor(Color.WHITE);
-            fontTexto.draw(batch, "Sensibilidad de cursor", rectCajaConfig.x + 60, rectBtnSensiMenos.y + 30);
+            if (!esAndroid) {
+                fontTexto.setColor(Color.WHITE);
+                fontTexto.draw(batch, "Sensibilidad de cursor", rectCajaConfig.x + 60, rectBtnSensiMenos.y + 30);
 
-            dibujarBotonConTexto(rectBtnSensiMenos, "-", Color.CYAN);
-            fontTexto.setColor(Color.CYAN);
-            glyphLayout.setText(fontTexto, textoSensi);
-            fontTexto.draw(batch, textoSensi, rectCajaConfig.x + 430f + (55f - glyphLayout.width) / 2f, rectBtnSensiMenos.y + 30);
-            dibujarBotonConTexto(rectBtnSensiMas, "+", Color.CYAN);
+                dibujarBotonConTexto(rectBtnSensiMenos, "-", Color.CYAN);
+                fontTexto.setColor(Color.CYAN);
+                glyphLayout.setText(fontTexto, textoSensi);
+                fontTexto.draw(batch, textoSensi, rectCajaConfig.x + 430f + (55f - glyphLayout.width) / 2f, rectBtnSensiMenos.y + 30);
+                dibujarBotonConTexto(rectBtnSensiMas, "+", Color.CYAN);
+            }
 
             // Línea separadora inferior
             batch.draw(imgLineaSeparadora, rectCajaConfig.x + 40, rectBtnModoPantalla.y + 60, rectCajaConfig.width - 80, 2);
 
             // --- FILA 4: MODO DE PANTALLA ---
             boolean esFull = configuracion.isPantallaCompleta();
-            dibujarBotonConTexto(rectBtnModoPantalla, "PANTALLA: " + (esFull ? "COMPLETA" : "VENTANA"), Color.CHARTREUSE);
+            String textoPantalla = esAndroid
+                    ? "ORIENTACION: HORIZONTAL"
+                    : "PANTALLA: " + (esFull ? "COMPLETA" : "VENTANA");
+            dibujarBotonConTexto(rectBtnModoPantalla, textoPantalla, Color.CHARTREUSE);
 
             // --- FILA 5: ESTILO CURSOR ---
-            boolean usaPunto = configuracion.isUsarCursorPuntoBlanco();
-            dibujarBotonConTexto(rectBtnAlternarCursor, "ESTILO CURSOR: " + (usaPunto ? "PUNTO PIXEL" : "SISTEMA"), Color.YELLOW);
+            if (esAndroid) {
+                dibujarBotonConTexto(rectBtnAlternarCursor, "CONTROLES: TOCAR", Color.YELLOW);
+            } else {
+                boolean usaPunto = configuracion.isUsarCursorPuntoBlanco();
+                dibujarBotonConTexto(rectBtnAlternarCursor, "ESTILO CURSOR: " + (usaPunto ? "PUNTO PIXEL" : "SISTEMA"), Color.YELLOW);
+            }
         }
 
         if (tiempoTransicion < DURACION_TRANSICION) {
@@ -424,12 +448,21 @@ public class PantallaMenuPrincipal implements Screen {
     }
 
     private boolean contieneSlider(Rectangle bounds, float x, float y) {
-        return x >= bounds.x - 10f && x <= bounds.x + bounds.width + 10f
-                && Math.abs(y - (bounds.y + bounds.height / 2f)) <= 18f;
+        float areaToque = Gdx.app.getType() == Application.ApplicationType.Android ? 48f : 18f;
+        return x >= bounds.x - areaToque && x <= bounds.x + bounds.width + areaToque
+                && Math.abs(y - (bounds.y + bounds.height / 2f)) <= areaToque;
     }
 
     private float valorSlider(Rectangle bounds, float x) {
         return MathUtils.clamp((x - bounds.x) / bounds.width, 0f, 1f);
+    }
+
+    private float calcularEscalaFuentes() {
+        if (Gdx.app.getType() != Application.ApplicationType.Android) {
+            return 1f;
+        }
+        float escalaViewport = Gdx.graphics.getHeight() / (float) JuegoGUI.VIRTUAL_HEIGHT;
+        return Gdx.graphics.getDensity() / Math.max(escalaViewport, 0.01f);
     }
 
     @Override public void resize(int width, int height) { viewport.update(width, height, true); }

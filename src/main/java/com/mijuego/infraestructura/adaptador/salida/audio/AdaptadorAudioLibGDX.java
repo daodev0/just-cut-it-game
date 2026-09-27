@@ -6,29 +6,23 @@ import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.utils.Disposable;
 import com.mijuego.aplicacion.puerto.salida.PuertoAudio;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public class AdaptadorAudioLibGDX implements PuertoAudio, Disposable {
 
     private final Map<String, Sound> sonidos;
     private final Map<String, Music> canciones;
-
-    private Music musicaActual;
-    private String idMusicaActual;
+    private final Map<String, ReproduccionMusical> reproduccionesActivas;
 
     // Volúmenes independientes (0.0f a 1.0f)
     private float volumenSFX = 0.4f;     // Nivel equilibrado para efectos
     private float volumenMusica = 0.5f;  // La música más baja para no tapar los SFX
 
-    // Fade-In control
-    private boolean haciendoFadeIn = false;
-    private float duracionFade = 0f;
-    private float tiempoFade = 0f;
-    private float factorMusicaActual = 1.0f;
-
     public AdaptadorAudioLibGDX() {
         sonidos = new HashMap<>();
         canciones = new HashMap<>();
+        reproduccionesActivas = new HashMap<>();
     }
 
     // --- CARGA DE ASSETS ---
@@ -73,63 +67,60 @@ public class AdaptadorAudioLibGDX implements PuertoAudio, Disposable {
 
     // --- MÚSICA ---
 
-    private void reproducirMusica(String id, float factorAjusteLocal) {
-        if (idMusicaActual != null && idMusicaActual.equals(id) && musicaActual != null && musicaActual.isPlaying()) {
-            return;
+    private void reproducirMusica(String id, float factorAjusteLocal, boolean simultanea,
+                                  float duracionSegundos) {
+        if (!simultanea) {
+            detenerMusica();
+        } else {
+            ReproduccionMusical reproduccionExistente = reproduccionesActivas.get(id);
+            if (reproduccionExistente != null && reproduccionExistente.musica.isPlaying()) {
+                return;
+            }
         }
 
-        detenerMusica();
-
-        musicaActual = canciones.get(id);
-        if (musicaActual != null) {
-            idMusicaActual = id;
-            factorMusicaActual = factorAjusteLocal;
-            musicaActual.setLooping(true);
-
-            actualizarVolumenMusicaActual();
-            musicaActual.play();
+        Music musica = canciones.get(id);
+        if (musica != null) {
+            ReproduccionMusical reproduccion = new ReproduccionMusical(
+                    musica, factorAjusteLocal, duracionSegundos);
+            reproduccionesActivas.put(id, reproduccion);
+            musica.setLooping(true);
+            musica.setVolume(reproduccion.volumenActual(volumenMusica));
+            musica.play();
         }
     }
 
     @Override
     public void reproducirMusicaConFade(String id, float duracionSegundos, float factorAjusteLocal) {
-        reproducirMusica(id, factorAjusteLocal);
-        if (musicaActual != null) {
-            if (duracionSegundos <= 0f) {
-                haciendoFadeIn = false;
-                musicaActual.setVolume(Math.max(0.0f, Math.min(1.0f, volumenMusica * factorMusicaActual)));
-                return;
-            }
-            duracionFade = duracionSegundos;
-            tiempoFade = 0f;
-            haciendoFadeIn = true;
-            musicaActual.setVolume(0f);
-        }
+        reproducirMusica(id, factorAjusteLocal, false, duracionSegundos);
+    }
+
+    @Override
+    public void reproducirMusicaSimultaneaConFade(
+            String id,
+            float duracionSegundos,
+            float factorAjusteLocal) {
+        reproducirMusica(id, factorAjusteLocal, true, duracionSegundos);
     }
 
     @Override
     public void actualizar(float delta) {
-        if (haciendoFadeIn && musicaActual != null) {
-            tiempoFade += delta;
-            float progreso = tiempoFade / duracionFade;
-
-            if (progreso >= 1.0f) {
-                progreso = 1.0f;
-                haciendoFadeIn = false;
+        Iterator<Map.Entry<String, ReproduccionMusical>> iterator =
+                reproduccionesActivas.entrySet().iterator();
+        while (iterator.hasNext()) {
+            ReproduccionMusical reproduccion = iterator.next().getValue();
+            reproduccion.actualizar(delta);
+            reproduccion.musica.setVolume(reproduccion.volumenActual(volumenMusica));
+            if (!reproduccion.musica.isPlaying()) {
+                iterator.remove();
             }
-
-            float volObjetivo = volumenMusica * factorMusicaActual;
-            musicaActual.setVolume(volObjetivo * progreso);
         }
     }
 
     private void detenerMusica() {
-        if (musicaActual != null) {
-            musicaActual.stop();
-            musicaActual = null;
-            idMusicaActual = null;
-            haciendoFadeIn = false;
+        for (ReproduccionMusical reproduccion : reproduccionesActivas.values()) {
+            reproduccion.musica.stop();
         }
+        reproduccionesActivas.clear();
     }
 
     // --- CONTROLES DE VOLUMEN Y GETTERS ---
@@ -156,9 +147,31 @@ public class AdaptadorAudioLibGDX implements PuertoAudio, Disposable {
     }
 
     private void actualizarVolumenMusicaActual() {
-        if (musicaActual != null && !haciendoFadeIn) {
-            float volFinal = volumenMusica * factorMusicaActual;
-            musicaActual.setVolume(Math.max(0.0f, Math.min(1.0f, volFinal)));
+        for (ReproduccionMusical reproduccion : reproduccionesActivas.values()) {
+            reproduccion.musica.setVolume(reproduccion.volumenActual(volumenMusica));
+        }
+    }
+
+    private static final class ReproduccionMusical {
+        private final Music musica;
+        private final float factorVolumen;
+        private final float duracionFade;
+        private float tiempoFade;
+
+        private ReproduccionMusical(Music musica, float factorVolumen, float duracionFade) {
+            this.musica = musica;
+            this.factorVolumen = factorVolumen;
+            this.duracionFade = Math.max(0f, duracionFade);
+            tiempoFade = 0f;
+        }
+
+        private void actualizar(float delta) {
+            tiempoFade = Math.min(duracionFade, tiempoFade + delta);
+        }
+
+        private float volumenActual(float volumenMusica) {
+            float progreso = duracionFade == 0f ? 1f : tiempoFade / duracionFade;
+            return Math.max(0f, Math.min(1f, volumenMusica * factorVolumen * progreso));
         }
     }
 

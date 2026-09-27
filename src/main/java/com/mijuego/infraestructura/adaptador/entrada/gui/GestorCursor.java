@@ -1,6 +1,7 @@
 package com.mijuego.infraestructura.adaptador.entrada.gui;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -46,21 +47,26 @@ public class GestorCursor implements Disposable {
     }
 
     public void render(SpriteBatch batch, Viewport viewport) {
+        boolean esAndroid = Gdx.app.getType() == Application.ApplicationType.Android;
         boolean usarPuntoBlanco = configuracion.isUsarCursorPuntoBlanco();
 
-        // Ocultar o mostrar el cursor del SO
-        Gdx.graphics.setSystemCursor(usarPuntoBlanco || tijerasAgarradas
-                ? com.badlogic.gdx.graphics.Cursor.SystemCursor.None
-                : com.badlogic.gdx.graphics.Cursor.SystemCursor.Arrow);
+        if (!esAndroid) {
+            Gdx.graphics.setSystemCursor(usarPuntoBlanco || tijerasAgarradas
+                    ? com.badlogic.gdx.graphics.Cursor.SystemCursor.None
+                    : com.badlogic.gdx.graphics.Cursor.SystemCursor.Arrow);
+        }
 
         if (tijerasAgarradas) {
+            if (esAndroid && !Gdx.input.isTouched()) {
+                return;
+            }
             posMouse.set(Gdx.input.getX(), Gdx.input.getY(), 0);
             viewport.unproject(posMouse);
             batch.draw(texturaTijeras, posMouse.x - 36f, posMouse.y - 36f, 96f, 96f);
             return;
         }
 
-        if (!usarPuntoBlanco) {
+        if (esAndroid || !usarPuntoBlanco) {
             return;
         }
 

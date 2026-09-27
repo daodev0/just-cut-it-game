@@ -1,0 +1,74 @@
+plugins {
+    id 'com.android.application' version '9.4.0'
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+def gdxVersion = '1.12.1'
+
+configurations {
+    natives
+}
+
+dependencies {
+    implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+    implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
+
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64"
+}
+
+android {
+    namespace 'com.mijuego.android'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.mijuego'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs = ['../src/main/java', 'src/main/java']
+            java.exclude '**/LauncherDesktop.java'
+            assets.srcDirs = ['../src/main/resources']
+            jniLibs.srcDirs = ["${buildDir}/generated/jniLibs"]
+        }
+    }
+}
+
+def androidNativesDir = "${buildDir}/generated/jniLibs"
+
+tasks.register('copyAndroidNatives') {
+    outputs.dir(androidNativesDir)
+    doLast {
+        configurations.natives.files.each { nativeJar ->
+            def matcher = nativeJar.name =~ /natives-(armeabi-v7a|arm64-v8a|x86|x86_64)\.jar$/
+            if (!matcher.find()) {
+                throw new GradleException("No se pudo identificar el ABI nativo: ${nativeJar.name}")
+            }
+            copy {
+                from zipTree(nativeJar)
+                include '*.so'
+                into "${androidNativesDir}/${matcher.group(1)}"
+            }
+        }
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('copyAndroidNatives')
+}

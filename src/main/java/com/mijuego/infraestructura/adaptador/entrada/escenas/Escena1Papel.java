@@ -43,6 +43,7 @@ public class Escena1Papel extends PantallaJuego {
     public void show() {
         super.show();
         audio.reproducirMusicaConFade("escena1", 1.5f, 1f);
+        audio.reproducirMusicaSimultaneaConFade("escena1talking", 1.5f, 0.55f);
         cuadrosPapel.add(cargarTextura(RUTA_CARPETA + "papel.png"));
         for (int indice = 1; indice <= CANTIDAD_CORTES; indice++) {
             cuadrosPapel.add(cargarTextura(RUTA_CARPETA + "papelCorte" + indice + ".png"));

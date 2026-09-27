@@ -1,6 +1,7 @@
 package com.mijuego.infraestructura.adaptador.salida.configuracion;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Graphics.DisplayMode;
 import com.badlogic.gdx.Preferences;
 import com.mijuego.aplicacion.puerto.salida.PuertoConfiguracion;
@@ -47,11 +48,14 @@ public class AdaptadorConfiguracionLibGDX implements PuertoConfiguracion {
     // 🎯 Getter y Métodos para Modo de Pantalla
     @Override
     public boolean isPantallaCompleta() {
-        return pantallaCompleta;
+        return Gdx.app.getType() == Application.ApplicationType.Android || pantallaCompleta;
     }
 
     @Override
     public void alternarModoPantalla() {
+        if (Gdx.app.getType() == Application.ApplicationType.Android) {
+            return;
+        }
         setPantallaCompleta(!pantallaCompleta);
     }
 

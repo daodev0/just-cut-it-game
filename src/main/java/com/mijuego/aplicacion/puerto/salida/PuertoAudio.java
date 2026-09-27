@@ -9,6 +9,8 @@ public interface PuertoAudio {
 
     void reproducirMusicaConFade(String id, float duracionSegundos, float factorAjusteLocal);
 
+    void reproducirMusicaSimultaneaConFade(String id, float duracionSegundos, float factorAjusteLocal);
+
     void actualizar(float delta);
 
     float getVolumenSFX();

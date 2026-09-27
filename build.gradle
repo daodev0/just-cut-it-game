@@ -27,3 +27,29 @@ dependencies {
     implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 }
+
+configurations {
+    windowsNatives {
+        transitive = false
+    }
+}
+
+dependencies {
+    windowsNatives "org.lwjgl:lwjgl:3.3.3:natives-windows"
+    windowsNatives "org.lwjgl:lwjgl-glfw:3.3.3:natives-windows"
+    windowsNatives "org.lwjgl:lwjgl-jemalloc:3.3.3:natives-windows"
+    windowsNatives "org.lwjgl:lwjgl-openal:3.3.3:natives-windows"
+    windowsNatives "org.lwjgl:lwjgl-opengl:3.3.3:natives-windows"
+    windowsNatives "org.lwjgl:lwjgl-stb:3.3.3:natives-windows"
+}
+
+tasks.register('windowsDistZip', Zip) {
+    dependsOn tasks.named('installDist')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName = 'just-cut-it-windows.zip'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from(tasks.named('installDist').map { it.destinationDir })
+    from(configurations.windowsNatives) {
+        into 'lib'
+    }
+}

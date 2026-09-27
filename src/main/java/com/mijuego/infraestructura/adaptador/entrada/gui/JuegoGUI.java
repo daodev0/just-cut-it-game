@@ -52,6 +52,7 @@ public class JuegoGUI extends Game {
         audio.cargarSonido("select", "seleccionar.mp3");
         audio.cargarMusica("menu", "bucle1.wav");
         audio.cargarMusica("escena1", "escena1loop.mp3");
+        audio.cargarMusica("escena1talking", "escena1talkingloop.mp3");
 
         // Inicializar cursor global
         gestorCursor = new GestorCursor(configuracion);

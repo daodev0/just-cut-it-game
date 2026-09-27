@@ -1,5 +1,7 @@
 package com.mijuego.infraestructura.adaptador.entrada.gui;
 
+import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -12,9 +14,11 @@ public class JuegoHUD {
 
     private static final Color COLOR_BOTON_DESACTIVADO = new Color(0.58f, 0.61f, 0.67f, 1f);
     private final GestorRecursos recursos;
+    private final float escalaFuentes;
 
     public JuegoHUD(GestorRecursos recursos) {
         this.recursos = recursos;
+        escalaFuentes = calcularEscalaFuentes();
     }
 
     public void dibujar(
@@ -42,45 +46,45 @@ public class JuegoHUD {
         // Encabezado y saldo destacado
         dibujarPanel(batch, 16f, 640f, 330f, 58f);
         font.setColor(Color.WHITE);
-        font.getData().setScale(1.7f);
+        establecerEscala(font, 1.7f);
         font.draw(batch, "JUST CUT IT!", 34f, 677f);
-        font.getData().setScale(0.95f);
+        establecerEscala(font, 0.95f);
         font.setColor(0.55f, 0.75f, 1f, 1f);
         font.draw(batch, "ESCENA 1  /  PAPEL", 36f, 653f);
 
         dibujarPanel(batch, 16f, 552f, 330f, 72f);
         batch.draw(recursos.getMoneda(), 32f, 571f, 34f, 34f);
         font.setColor(1f, 0.84f, 0.25f, 1f);
-        font.getData().setScale(0.9f);
+        establecerEscala(font, 0.9f);
         font.draw(batch, "MONEDAS", 78f, 608f);
         font.setColor(Color.WHITE);
-        font.getData().setScale(1.35f);
+        establecerEscala(font, 1.35f);
         font.draw(batch, Integer.toString(partida.obtenerMonedas()), 78f, 578f);
 
         if (tiempoRecompensa > 0f && recompensaReciente > 0f) {
             float alpha = MathUtils.clamp(tiempoRecompensa / 1.4f, 0f, 1f);
             font.setColor(0.55f, 1f, 0.55f, alpha);
-            font.getData().setScale(1.05f);
+            establecerEscala(font, 1.05f);
             font.draw(batch, "+" + recompensaReciente, 248f, 585f);
         }
 
         // Estado de tijera y papel
         dibujarPanel(batch, panelX, panelY, panelWidth, panelHeight);
         font.setColor(0.55f, 0.75f, 1f, 1f);
-        font.getData().setScale(1f);
+        establecerEscala(font, 1f);
         font.draw(batch, "TU EQUIPO", panelX + 20f, panelY + panelHeight - 28f);
         font.setColor(Color.WHITE);
-        font.getData().setScale(1.1f);
+        establecerEscala(font, 1.1f);
         font.draw(batch, tijera.obtenerNombre(), panelX + 18f, panelY + panelHeight - 60f);
 
         font.setColor(0.77f, 0.81f, 0.9f, 1f);
-        font.getData().setScale(0.82f);
+        establecerEscala(font, 0.82f);
         font.draw(batch, "NIVEL " + tijera.obtenerNivel(), panelX + 18f, panelY + panelHeight - 88f);
         font.draw(batch, String.format(Locale.US, "PODER  %.1f", tijera.obtenerPoderCorte()),
                 panelX + 138f, panelY + panelHeight - 88f);
 
         font.setColor(Color.WHITE);
-        font.getData().setScale(0.78f);
+        establecerEscala(font, 0.78f);
         font.draw(batch, "RESISTENCIA DEL PAPEL", panelX + 18f, panelY + 74f);
         dibujarBarra(batch, panelX + 18f, panelY + 49f, panelWidth - 36f, 12f, porcentajeVida);
         font.setColor(0.77f, 0.81f, 0.9f, 1f);
@@ -90,10 +94,10 @@ public class JuegoHUD {
         // Acciones
         dibujarPanel(batch, 16f, 270f, 330f, 62f);
         font.setColor(1f, 0.84f, 0.25f, 1f);
-        font.getData().setScale(0.72f);
+        establecerEscala(font, 0.72f);
         font.draw(batch, "CLIC EN LAS TIJERAS Y LUEGO", 32f, 306f);
         font.setColor(0.77f, 0.81f, 0.9f, 1f);
-        font.getData().setScale(0.72f);
+        establecerEscala(font, 0.72f);
         font.draw(batch, "clic en el papel para cortar", 32f, 284f);
 
         dibujarBoton(batch, btnMejorar, recursos.getBotonMejorar(),
@@ -132,10 +136,22 @@ public class JuegoHUD {
 
         var font = recursos.getFont();
         font.setColor(Color.WHITE);
-        font.getData().setScale(1.05f);
+        establecerEscala(font, 1.05f);
         font.draw(batch, titulo, bounds.x + 18f, bounds.y + bounds.height - 30f);
         font.setColor(0.87f, 0.91f, 1f, 1f);
-        font.getData().setScale(0.68f);
+        establecerEscala(font, 0.68f);
         font.draw(batch, subtitulo, bounds.x + 18f, bounds.y + 22f);
+    }
+
+    private float calcularEscalaFuentes() {
+        if (Gdx.app.getType() != Application.ApplicationType.Android) {
+            return 1f;
+        }
+        float escalaViewport = Gdx.graphics.getHeight() / (float) JuegoGUI.VIRTUAL_HEIGHT;
+        return Gdx.graphics.getDensity() / Math.max(escalaViewport, 0.01f);
+    }
+
+    private void establecerEscala(com.badlogic.gdx.graphics.g2d.BitmapFont font, float escala) {
+        font.getData().setScale(escala * escalaFuentes);
     }
 }
